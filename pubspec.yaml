@@ -1,0 +1,45 @@
+name: onsound
+description: App de música para ouvir qualquer coisa offline, sem usar sua própria memória!
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  # Auth & Google Drive
+  google_sign_in: ^6.2.1
+  googleapis: ^13.1.0
+  googleapis_auth: ^1.4.1
+  http: ^1.2.0
+  
+  # Audio & Player
+  just_audio: ^0.9.36
+  audio_session: ^0.1.18
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+  
+  # Database & Storage
+  path_provider: ^2.1.2
+  shared_preferences: ^2.2.2
+  
+  # UI & Utils
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  cached_network_image: ^3.3.1
+  flutter_animate: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  # Adicionaremos assets conforme necessário
