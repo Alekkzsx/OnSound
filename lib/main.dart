@@ -22,13 +22,25 @@ class OnSoundApp extends StatelessWidget {
       title: 'OnSound',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1DB954), // Spotify Green
-          brightness: Brightness.dark,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.white,
+          secondary: Colors.white70,
+          surface: Colors.black,
+          background: Colors.black,
         ),
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(
           ThemeData.dark().textTheme,
+        ).apply(bodyColor: Colors.white, displayColor: Colors.white),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+          ),
         ),
       ),
       home: const MainScreen(),
@@ -45,85 +57,130 @@ class MainScreen extends ConsumerWidget {
     final authService = ref.watch(authServiceProvider);
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF121212),
-              Color(0xFF1DB954),
-            ],
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.music_note, size: 80, color: Colors.white),
-            const SizedBox(height: 16),
-            const Text(
-              'OnSound',
-              style: TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -1.5,
-                color: Colors.white,
-              ),
-            ),
-            const Text(
-              'Sua nuvem de música offline',
-              style: TextStyle(fontSize: 16, color: Colors.white70),
-            ),
-            const SizedBox(height: 48),
-
-            if (user == null)
-              ElevatedButton.icon(
-                onPressed: () => authService.signIn(),
-                icon: const Icon(Icons.login),
-                label: const Text('Entrar com Google'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              )
-            else
-              Column(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
-                    radius: 30,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Olá, ${user.displayName}',
-                    style: const TextStyle(fontSize: 18, color: Colors.white),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LibraryScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text('Ver Minha Biblioteca'),
-                  ),
-                  TextButton(
-                    onPressed: () => authService.signOut(),
-                    child: const Text('Sair', style: TextStyle(color: Colors.white60)),
-                  ),
+      body: Stack(
+        children: [
+          // Background Gradient Monocromático
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF1A1A1A),
+                  Colors.black,
                 ],
               ),
-          ],
-        ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo com brilho sutil
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.1),
+                          blurRadius: 40,
+                          spreadRadius: 5,
+                        )
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.music_note_rounded,
+                      size: 70,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Text(
+                    'ONSOUND',
+                    style: GoogleFonts.outfit(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 8,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Sua música em qualquer lugar.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      color: Colors.white38,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 80),
+                  
+                  if (user == null)
+                    ElevatedButton.icon(
+                      onPressed: () => authService.signIn(),
+                      icon: const Icon(Icons.login),
+                      label: const Text(
+                        'Entrar com Google',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: CircleAvatar(
+                            backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+                            radius: 35,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Olá, ${user.displayName}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const LibraryScreen()),
+                            );
+                          },
+                          child: const Text(
+                            'Ver Minha Biblioteca',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        TextButton(
+                          onPressed: () => authService.signOut(),
+                          child: const Text(
+                            'Sair da conta',
+                            style: TextStyle(color: Colors.white38),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
