@@ -65,6 +65,7 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider);
     final isLoading = ref.watch(authLoadingProvider);
+    final webOriginError = ref.watch(authWebOriginErrorProvider);
     final authService = ref.read(authServiceProvider);
 
     if (isLoading) {
@@ -127,16 +128,31 @@ class MainScreen extends ConsumerWidget {
                   style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 15),
                 ).animate().fadeIn(delay: 220.ms, duration: 350.ms),
                 const SizedBox(height: 40),
-                buildGoogleAuthButton(
-                  onPressed: () async {
-                    final account = await authService.signIn();
-                    if (account == null && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Falha ao autenticar. Tente novamente.')),
-                      );
-                    }
-                  },
-                ).animate().fadeIn(delay: 320.ms, duration: 350.ms),
+                if (webOriginError != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A1717),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF7A2E2E)),
+                    ),
+                    child: Text(
+                      '$webOriginError\n\nRode com:\nflutter run -d chrome --web-hostname localhost --web-port 5000',
+                      style: const TextStyle(color: Color(0xFFFFC7C7)),
+                    ),
+                  ).animate().fadeIn(delay: 320.ms, duration: 350.ms)
+                else
+                  buildGoogleAuthButton(
+                    onPressed: () async {
+                      final account = await authService.signIn();
+                      if (account == null && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Falha ao autenticar. Tente novamente.')),
+                        );
+                      }
+                    },
+                  ).animate().fadeIn(delay: 320.ms, duration: 350.ms),
               ],
             ),
           ),

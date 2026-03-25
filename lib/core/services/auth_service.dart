@@ -1,5 +1,6 @@
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Provedor para o serviço de autenticação central.
@@ -10,6 +11,22 @@ final authLoadingProvider = StateProvider<bool>((ref) => true);
 
 /// Provedor que monitora o estado do usuário logado através do Riverpod.
 final authStateProvider = StateProvider<GoogleSignInAccount?>((ref) => null);
+
+/// Origem permitida para autenticação Web (deve bater com Google Cloud OAuth).
+/// Pode ser sobrescrita com:
+/// --dart-define=ONSOUND_ALLOWED_WEB_ORIGIN=http://localhost:3000
+const allowedWebAuthOrigin = String.fromEnvironment(
+  'ONSOUND_ALLOWED_WEB_ORIGIN',
+  defaultValue: 'http://localhost:5000',
+);
+
+/// Provedor para o texto de bloqueio de origem no Web.
+final authWebOriginErrorProvider = Provider<String?>((ref) {
+  if (!kIsWeb) return null;
+  final currentOrigin = Uri.base.origin;
+  if (currentOrigin == allowedWebAuthOrigin) return null;
+  return 'Auth bloqueada nesta URL ($currentOrigin). Use $allowedWebAuthOrigin.';
+});
 
 /// Serviço responsável por gerenciar a autenticação com a conta Google.
 /// Requisita permissões específicas para acessar arquivos no Google Drive.
@@ -30,6 +47,12 @@ class AuthService {
     _googleSignIn.onCurrentUserChanged.listen((account) {
       _ref.read(authStateProvider.notifier).state = account;
     });
+
+    // Em Web, evita tentativa de auth fora da origem autorizada.
+    if (kIsWeb && Uri.base.origin != allowedWebAuthOrigin) {
+      _ref.read(authLoadingProvider.notifier).state = false;
+      return;
+    }
 
     // Tenta restaurar automaticamente uma sessão anterior ao iniciar o app.
     _tryAutoLogin();
@@ -52,6 +75,13 @@ class AuthService {
 
   /// Inicia o fluxo de login interativo com a conta Google.
   Future<GoogleSignInAccount?> signIn() async {
+    if (kIsWeb && Uri.base.origin != allowedWebAuthOrigin) {
+      debugPrint(
+        'Auth bloqueada: origem atual ${Uri.base.origin} != $allowedWebAuthOrigin',
+      );
+      return null;
+    }
+
     try {
       // No Web, o signIn() pode falhar se não houver interação direta.
       final account = await _googleSignIn.signIn();
