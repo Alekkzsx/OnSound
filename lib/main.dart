@@ -1,260 +1,231 @@
-import 'package:flutter/material.dart'; // Importa o SDK do Flutter para UI (Material Design).
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Importa o Riverpod para gerenciamento de estado.
-import 'package:google_fonts/google_fonts.dart'; // Importa fontes externas do Google Fonts.
-import 'package:cached_network_image/cached_network_image.dart';
-import 'features/library/library_screen.dart'; // Importa a tela da biblioteca local do projeto.
-import 'core/services/auth_service.dart'; // Importa o serviço de autenticação do projeto.
-import 'widgets/google_auth_button.dart'; // Botão do Google cross-platform
+﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-/// A função [main] é o ponto de partida de qualquer aplicativo Flutter/Dart.
+import 'core/services/auth_service.dart';
+import 'features/dashboard/home_dashboard_screen.dart';
+import 'features/library/library_screen.dart';
+import 'features/profile/profile_screen.dart';
+import 'features/search/search_screen.dart';
+import 'widgets/google_auth_button.dart';
+import 'widgets/mini_player.dart';
+
 void main() {
-  /// [WidgetsFlutterBinding.ensureInitialized] garante que os serviços do Flutter
-  /// (como plugins, acesso a arquivos, etc.) estejam prontos antes de chamar código assíncrono.
   WidgetsFlutterBinding.ensureInitialized();
-  
-  /// [runApp] inicia o ciclo de vida do Flutter e renderiza o widget raiz.
-  runApp(
-    /// [ProviderScope] é um widget obrigatório do Riverpod. Ele armazena o estado
-    /// de todos os "providers" (provedores de dados) criados no aplicativo.
-    const ProviderScope(
-      child: OnSoundApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: OnSoundApp()));
 }
 
-/// [OnSoundApp] é o widget raiz de nível superior.
-/// Usamos [StatelessWidget] porque as configurações globais do app não mudam após o início.
 class OnSoundApp extends StatelessWidget {
   const OnSoundApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    /// [MaterialApp] é o "esqueleto" que configura navegação, localização e temas.
+    final textTheme = GoogleFonts.spaceGroteskTextTheme(ThemeData.dark().textTheme)
+        .apply(bodyColor: Colors.white, displayColor: Colors.white);
+
     return MaterialApp(
       title: 'OnSound',
-      debugShowCheckedModeBanner: false, // Oculta a etiqueta "DEBUG" no canto superior.
-      
-      /// [ThemeData] define o DNA visual do app (cores, fontes, tamanhos).
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark, // Define que o app usará cores escuras por padrão.
-        scaffoldBackgroundColor: Colors.black, // Cor de fundo de cada tela.
-        
-        /// [ColorScheme] organiza as cores principais (Primária, Secundária, etc).
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.white,
-          secondary: Colors.white70,
-          surface: Colors.black,
-        ),
-        
-        /// [useMaterial3] ativa as diretrizes de design mais recentes do Google (Android 12/13+).
         useMaterial3: true,
-        
-        /// [textTheme] define os estilos de texto globais.
-        /// Aqui usamos [GoogleFonts.outfitTextTheme] para aplicar a fonte 'Outfit'.
-        textTheme: GoogleFonts.outfitTextTheme(
-          ThemeData.dark().textTheme,
-        ).apply(bodyColor: Colors.white, displayColor: Colors.white),
-        
-        /// [elevatedButtonTheme] define como os botões de destaque devem se parecer em todo o app.
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF1ED760),
+          secondary: Color(0xFFB3B3B3),
+          surface: Color(0xFF121212),
+        ),
+        textTheme: textTheme,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
+            backgroundColor: const Color(0xFF1ED760),
             foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
       ),
-      
-      /// [home] define qual é a primeira tela que o usuário verá ao abrir o app.
       home: const MainScreen(),
     );
   }
 }
 
-/// [MainScreen] é a tela inicial. Usamos [ConsumerWidget] (comando do Riverpod)
-/// para que possamos "consumir" (ler/observar) dados dos nossos serviços.
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
 
-  /// O método [build] é chamado sempre que a UI precisa ser desenhada.
-  /// O parâmetro [ref] nos permite interagir com os Providers do Riverpod.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// [ref.watch] observa um provider. Se o valor do provider mudar,
-    /// o Flutter reconstrói automaticamente esta tela.
-    final user = ref.watch(authStateProvider); // Estado da conta Google.
-    final isLoading = ref.watch(authLoadingProvider); // Verificando login automático.
+    final user = ref.watch(authStateProvider);
+    final isLoading = ref.watch(authLoadingProvider);
     final authService = ref.read(authServiceProvider);
 
-    // Se estiver verificando o login automático, mostra uma tela de splash/carregamento.
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF1ED760))),
       );
     }
 
-    /// [Scaffold] fornece a estrutura básica de UI (AppBars, Drawers, SnackBar).
+    if (user != null) {
+      return AppShell(user: user);
+    }
+
     return Scaffold(
-      /// [Stack] permite empilhar widgets um em cima do outro (Z-axis).
-      body: Stack(
-        children: [
-          /// Primeiro item do Stack (Fundo): Um gradiente decorativo.
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1A1A1A), // Cinza quase preto.
-                  Colors.black,
-                ],
-              ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0A0A0A), Color(0xFF121212), Color(0xFF1A1A1A)],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF1ED760).withValues(alpha: 0.15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1ED760).withValues(alpha: 0.2),
+                        blurRadius: 35,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.graphic_eq, color: Color(0xFF1ED760), size: 64),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .scale(begin: const Offset(0.92, 0.92), end: const Offset(1, 1)),
+                const SizedBox(height: 28),
+                Text(
+                  'ONSOUND',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 52,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.5,
+                  ),
+                ).animate().fadeIn(delay: 120.ms, duration: 350.ms),
+                const SizedBox(height: 10),
+                const Text(
+                  'Sua biblioteca de musica em qualquer lugar, com vibe de player premium.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 15),
+                ).animate().fadeIn(delay: 220.ms, duration: 350.ms),
+                const SizedBox(height: 40),
+                buildGoogleAuthButton(
+                  onPressed: () async {
+                    final account = await authService.signIn();
+                    if (account == null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Falha ao autenticar. Tente novamente.')),
+                      );
+                    }
+                  },
+                ).animate().fadeIn(delay: 320.ms, duration: 350.ms),
+              ],
             ),
           ),
-          
-          /// Segundo item do Stack: O conteúdo principal do app.
-          /// [SafeArea] evita que o conteúdo fique sob o notch ou barra de status.
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center, // Centraliza verticalmente.
-                children: [
-                  /// [Container] usado para criar o círculo de brilho (Logo).
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          blurRadius: 40,
-                          spreadRadius: 5,
-                        )
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.music_note_rounded,
-                      size: 70,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 40), // Espaço fixo vertical.
-                  
-                  /// Título do Aplicativo.
-                  Text(
-                    'ONSOUND',
-                    style: GoogleFonts.outfit(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 8,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  /// Slogan.
-                  Text(
-                    'Sua música em qualquer lugar.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: Colors.white38,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                  
-                  /// LÓGICA DE INTERFACE CONDICIONAL:
-                  /// Se o usuário [user] for nulo, mostramos o login.
-                  if (user == null)
-                    buildGoogleAuthButton(
-                      onPressed: () async {
-                        final result = await authService.signIn();
-                        if (result == null && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Falha ao autenticar. Tente novamente.')),
-                          );
-                        }
-                      },
-                    )
-                  /// Se o usuário estiver logado, mostramos seu perfil e acesso à biblioteca.
-                  else
-                    Column(
-                      children: [
-                        /// Círculo com a foto de perfil do Google.
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: user.photoUrl != null
-                              ? ClipOval(
-                                  child: CachedNetworkImage(
-                                    imageUrl: user.photoUrl!,
-                                    width: 70,
-                                    height: 70,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (context, url, error) =>
-                                        const Icon(Icons.person, size: 35, color: Colors.black),
-                                  ),
-                                )
-                              : const CircleAvatar(
-                                  radius: 35,
-                                  child: Icon(Icons.person, size: 35, color: Colors.black),
-                                ),
-                        ),
-                        const SizedBox(height: 20),
-                        
-                        /// Nome de exibição do usuário.
-                        Text(
-                          'Olá, ${user.displayName}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        
-                        /// Botão principal para entrar na biblioteca.
-                        ElevatedButton(
-                          onPressed: () {
-                            /// [Navigator.push] troca a tela atual por uma nova.
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const LibraryScreen()),
-                            );
-                          },
-                          child: const Text(
-                            'Ver Minha Biblioteca',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-                        
-                        /// Botão discreto para deslogar.
-                        TextButton(
-                          onPressed: () => authService.signOut(), // Chama função de logout.
-                          child: const Text(
-                            'Sair da conta',
-                            style: TextStyle(color: Colors.white38),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppShell extends ConsumerStatefulWidget {
+  final GoogleSignInAccount user;
+
+  const AppShell({super.key, required this.user});
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final screens = [
+      const HomeDashboardScreen(),
+      const SearchScreen(),
+      const LibraryScreen(),
+      ProfileScreen(user: widget.user),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(index: _currentIndex, children: screens),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0A0A0A),
+          border: Border(top: BorderSide(color: Color(0xFF1F1F1F))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const MiniPlayer(),
+            NavigationBar(
+              height: 70,
+              backgroundColor: const Color(0xFF0A0A0A),
+              indicatorColor: const Color(0xFF1ED760).withValues(alpha: 0.15),
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) => setState(() => _currentIndex = index),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+                NavigationDestination(icon: Icon(Icons.search), selectedIcon: Icon(Icons.manage_search), label: 'Buscar'),
+                NavigationDestination(icon: Icon(Icons.library_music_outlined), selectedIcon: Icon(Icons.library_music), label: 'Biblioteca'),
+                NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileAvatar extends StatelessWidget {
+  final String? photoUrl;
+  final double radius;
+
+  const ProfileAvatar({super.key, required this.photoUrl, this.radius = 24});
+
+  @override
+  Widget build(BuildContext context) {
+    if (photoUrl == null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: const Color(0xFF2C2C2C),
+        child: Icon(Icons.person, color: Colors.white70, size: radius),
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: const Color(0xFF2C2C2C),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: photoUrl!,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => Icon(Icons.person, color: Colors.white70, size: radius),
+        ),
       ),
     );
   }
