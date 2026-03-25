@@ -1,171 +1,172 @@
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/services/audio_service.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/services/download_service.dart';
 import '../../core/services/drive_service.dart';
 import '../../models/song.dart';
-import '../../widgets/mini_player.dart';
-import '../../core/services/auth_service.dart';
-import '../settings/settings_screen.dart';
-import '../search/search_screen.dart';
 
-/// Provedor assíncrono que busca a lista de músicas do Google Drive.
-/// Ele navega até a pasta 'OnSound' e mapeia os arquivos encontrados para objetos [Song].
 final musicListProvider = FutureProvider<List<Song>>((ref) async {
   final driveService = ref.watch(driveServiceProvider);
   if (driveService == null) return [];
 
-  // Garante que a pasta do aplicativo existe no Drive.
   final folderId = await driveService.getOrCreateOnSoundFolder();
   if (folderId == null) return [];
 
-  // Lista os arquivos de áudio dentro da pasta identificada.
   final files = await driveService.listMusicFiles(folderId);
-  return files.map((f) {
-    // Extrai a URL da thumbnail dos metadados customizados do Drive.
-    final thumbUrl = f.appProperties?['thumbnailUrl'];
-    
-    return Song(
-      driveId: f.id ?? '',
-      name: f.name ?? 'Desconhecido',
-      thumbnailUrl: thumbUrl,
-    );
-  }).toList();
+  return files
+      .map(
+        (f) => Song(
+          driveId: f.id ?? '',
+          name: f.name ?? 'Desconhecido',
+          thumbnailUrl: f.appProperties?['thumbnailUrl'],
+        ),
+      )
+      .toList();
 });
 
-/// Tela principal da biblioteca de músicas do usuário.
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Observa o estado da lista de músicas (loading/data/error).
     final musicList = ref.watch(musicListProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sua Biblioteca'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          // Botão de Busca (YouTube/SoundCloud).
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
-              );
-            },
-          ),
-          // Botão para navegar para a tela de configurações.
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      extendBodyBehindAppBar: true,
-      body: Container(
-        // Fundo com gradiente estilizado (Verde Spotify para Preto).
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1DB954), Color(0xFF121212)],
-            stops: [0.0, 0.3],
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1D2C21), Color(0xFF0A0A0A)],
         ),
+      ),
+      child: SafeArea(
         child: musicList.when(
+          loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF1ED760))),
+          error: (err, _) => Center(child: Text('Erro ao carregar biblioteca: $err')),
           data: (songs) {
-            // Caso a lista esteja vazia após a busca.
-            if (songs.isEmpty) {
-              return const Center(child: Text('Nenhuma música encontrada no Drive.'));
-            }
-            // Constrói a lista rolável de músicas.
-            return ListView.builder(
-              padding: const EdgeInsets.only(top: 100),
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: song.thumbnailUrl != null
-                        ? Image.network(
-                            song.thumbnailUrl!,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.music_note, color: Colors.white70),
-                          )
-                        : const Icon(Icons.music_note, color: Colors.white70),
-                  ),
-                  title: Text(song.name, style: const TextStyle(color: Colors.white)),
-                  subtitle: Text(
-                    song.isOffline ? 'Disponível Offline' : 'Toque para reproduzir',
-                    style: TextStyle(color: song.isOffline ? const Color(0xFF1DB954) : Colors.white60),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Botão Favoritar (Placeholder para funcionalidade futura).
-                      IconButton(
-                        icon: const Icon(Icons.favorite_border, color: Colors.white60),
-                        onPressed: () {},
-                      ),
-                      // Botão de Download/Status Offline.
-                      IconButton(
-                        icon: Icon(
-                          song.isOffline ? Icons.check_circle : Icons.download_for_offline,
-                          color: song.isOffline ? const Color(0xFF1DB954) : Colors.white60,
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Sua Biblioteca', style: TextStyle(fontSize: 31, fontWeight: FontWeight.w800)),
+                              SizedBox(height: 6),
+                              Text('Colecao pessoal no Google Drive', style: TextStyle(color: Color(0xFFB3B3B3))),
+                            ],
+                          ),
                         ),
-                        onPressed: () async {
-                          if (!song.isOffline) {
-                            try {
-                              // Inicia o processo de download e cache local.
-                              final downloadService = ref.read(downloadServiceProvider);
-                              await downloadService.downloadAndCache(song);
-                              // Atualiza a lista na UI após o download.
-                              ref.invalidate(musicListProvider);
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Erro ao baixar: $e')),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ],
+                        IconButton(
+                          onPressed: () => ref.invalidate(musicListProvider),
+                          icon: const Icon(Icons.refresh, color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
-                  onTap: () async {
-                    // Inicia a reprodução da música selecionada.
-                    final audioService = ref.read(audioServiceProvider);
-                    final authService = ref.read(authServiceProvider);
-                    
-                    // Obtém o token atual para streaming autenticado.
-                    final token = await authService.getAccessToken();
-                    
-                    await audioService.playSong(song, accessToken: token);
-                  },
-                );
-              },
+                ),
+                if (songs.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          'Nenhuma musica encontrada no Drive ainda. Va em Buscar para montar sua biblioteca.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFFB3B3B3)),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 120),
+                    sliver: SliverList.builder(
+                      itemCount: songs.length,
+                      itemBuilder: (context, index) {
+                        final song = songs[index];
+                        return _SongTile(song: song);
+                      },
+                    ),
+                  ),
+              ],
             );
           },
-          // Indicador de progresso enquanto a lista é carregada do Drive.
-          loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-          // Exibição amigável de erros de rede ou permissão.
-          error: (err, stack) => Center(child: Text('Erro: $err')),
         ),
       ),
-      // Player flutuante na parte inferior se houver música carregada.
-      bottomNavigationBar: const MiniPlayer(),
+    );
+  }
+}
+
+class _SongTile extends ConsumerWidget {
+  final Song song;
+
+  const _SongTile({required this.song});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF171717),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: song.thumbnailUrl != null && song.thumbnailUrl!.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: song.thumbnailUrl!,
+                  width: 54,
+                  height: 54,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => const Icon(Icons.music_note, color: Colors.white70),
+                )
+              : const SizedBox(
+                  width: 54,
+                  height: 54,
+                  child: ColoredBox(
+                    color: Color(0xFF252525),
+                    child: Icon(Icons.music_note, color: Colors.white70),
+                  ),
+                ),
+        ),
+        title: Text(song.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          song.isOffline ? 'Disponivel offline' : 'Streaming do Drive',
+          style: TextStyle(color: song.isOffline ? const Color(0xFF1ED760) : const Color(0xFFB3B3B3)),
+        ),
+        trailing: IconButton(
+          icon: Icon(
+            song.isOffline ? Icons.check_circle : Icons.download_for_offline,
+            color: song.isOffline ? const Color(0xFF1ED760) : Colors.white70,
+          ),
+          onPressed: () async {
+            if (song.isOffline) return;
+            try {
+              final downloadService = ref.read(downloadServiceProvider);
+              await downloadService.downloadAndCache(song);
+              ref.invalidate(musicListProvider);
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao baixar: $e')));
+              }
+            }
+          },
+        ),
+        onTap: () async {
+          final token = await ref.read(authServiceProvider).getAccessToken();
+          await ref.read(audioServiceProvider).playSong(song, accessToken: token);
+        },
+      ),
     );
   }
 }
